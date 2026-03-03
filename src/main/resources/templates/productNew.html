@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Add Product</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+
+    <style>
+        .card {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+<nav class="navbar navbar-dark bg-primary">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">
+            <i class="bi bi-shop"></i> Liquor Inventory System
+        </a>
+    </div>
+</nav>
+
+<div class="container mt-4">
+
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h4><i class="bi bi-plus-circle"></i> Add New Product</h4>
+        </div>
+
+        <div class="card-body">
+
+            <form th:action="@{/products/new}" method="post">
+
+                <div class="mb-3">
+                    <label class="form-label">Product Name *</label>
+                    <input type="text" name="productName" class="form-control" required maxlength="100">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Category</label>
+                    <select name="category" class="form-select">
+                        <option value="">-- Select Category --</option>
+                        <option>Whisky</option>
+                        <option>Vodka</option>
+                        <option>Rum</option>
+                        <option>Beer</option>
+                        <option>Wine</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Brand</label>
+                    <input type="text" name="brand" class="form-control">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Volume (ML)</label>
+                    <input type="number" step="0.01" name="volumeML" class="form-control">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Unit *</label>
+                    <select name="unit" class="form-select">
+                        <option value="BOTTLE">BOTTLE</option>
+                        <option value="CASE">CASE</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> Save Product
+                </button>
+
+                <a th:href="@{/products}" class="btn btn-secondary">
+                    Cancel
+                </a>
+
+            </form>
+
+        </div>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

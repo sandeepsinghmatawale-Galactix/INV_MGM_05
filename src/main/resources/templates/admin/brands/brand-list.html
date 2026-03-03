@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Brand Management</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container py-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold">Brand Management</h2>
+        <a th:href="@{/admin/brands/new}" class="btn btn-primary">
+            + Add New Brand
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            <table class="table table-hover align-middle">
+                <thead class="table-dark">
+                <tr>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Status</th>
+                    <th width="220">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="brand : ${brands}">
+                    <td th:text="${brand.name}"></td>
+                    <td th:text="${brand.category}"></td>
+                    <td>
+                        <span class="badge bg-success" th:if="${brand.active}">Active</span>
+                        <span class="badge bg-secondary" th:unless="${brand.active}">Inactive</span>
+                    </td>
+                    <td>
+                        <a th:href="@{'/admin/brands/' + ${brand.id} + '/edit'}"
+                           class="btn btn-sm btn-warning">Edit</a>
+
+                        <a th:href="@{'/admin/brands/' + ${brand.id} + '/sizes'}"
+                           class="btn btn-sm btn-info text-white">Sizes</a>
+
+                        <form th:action="@{'/admin/brands/' + ${brand.id} + '/delete'}"
+                              method="post"
+                              class="d-inline">
+                            <button class="btn btn-sm btn-danger"
+                                    onclick="return confirm('Deactivate this brand?')">
+                                Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+
+                <tr th:if="${#lists.isEmpty(brands)}">
+                    <td colspan="4" class="text-center text-muted py-4">
+                        No brands found.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+        </div>
+    </div>
+
+</div>
+</body>
+</html>
