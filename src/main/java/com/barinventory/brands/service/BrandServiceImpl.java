@@ -22,77 +22,128 @@ public class BrandServiceImpl implements BrandService {
     private final BrandRepository     brandRepository;
     private final BrandSizeRepository brandSizeRepository;
 
-    // ── CREATE (basic) ────────────────────────────────────────────────
+    // ── GET ALL ───────────────────────────────────────────────────────
+    @Override
+    @Transactional(readOnly = true)
+    public List<Brand> getAllBrands() {
+        return brandRepository.findAll();
+    }
+
+    // ── GET ACTIVE ────────────────────────────────────────────────────
+    @Override
+    @Transactional(readOnly = true)
+    public List<BrandDTO> getAllActiveBrands() {
+        return brandRepository.findAllActiveWithSizes()
+                .stream().map(this::mapToDTO).toList();
+    }
+
+    // ── GET BY ID ─────────────────────────────────────────────────────
+    @Override
+    @Transactional(readOnly = true)
+    public BrandDTO getBrandById(Long id) {
+        return brandRepository.findByIdWithSizes(id)
+                .map(this::mapToDTO)
+                .orElseThrow(() -> new RuntimeException("Brand not found: " + id));
+    }
+
+    // ── CREATE (basic, API use) ────────────────────────────────────────
     @Override
     @Transactional
     public BrandDTO createBrand(BrandDTO dto) {
-        if (brandRepository.existsByNameIgnoreCase(dto.getName()))
-            throw new RuntimeException("Brand already exists: " + dto.getName());
+        if (brandRepository.existsByBrandNameIgnoreCase(dto.getBrandName()))
+            throw new RuntimeException("Brand already exists: " + dto.getBrandName());
+
         Brand brand = Brand.builder()
-                .name(dto.getName())
+                .brandCode(dto.getBrandCode())
+                .brandName(dto.getBrandName())
                 .parentCompany(dto.getParentCompany())
                 .category(dto.getCategory())
+                .subCategory(dto.getSubCategory())
                 .exciseCode(dto.getExciseCode())
+                .exciseCessPercent(dto.getExciseCessPercent())
+                .tcsPercent(dto.getTcsPercent())
+                .gstPercent(dto.getGstPercent())
                 .active(true)
                 .build();
         return mapToDTO(brandRepository.save(brand));
     }
-    
-    @Override
-    public List<Brand> getAllBrands() {
-        return brandRepository.findAll();
-    }
-    // ── CREATE WITH SIZES (single-page form) ──────────────────────────
+
+    // ── CREATE WITH SIZES (form) ──────────────────────────────────────
     @Override
     @Transactional
     public BrandDTO createBrandWithSizes(BrandFormDTO form) {
-        if (brandRepository.existsByNameIgnoreCase(form.getName()))
-            throw new RuntimeException("Brand already exists: " + form.getName());
+        if (brandRepository.existsByBrandNameIgnoreCase(form.getBrandName()))
+            throw new RuntimeException("Brand already exists: " + form.getBrandName());
+
+        if (brandRepository.existsByBrandCodeIgnoreCase(form.getBrandCode()))
+            throw new RuntimeException("Brand code already in use: " + form.getBrandCode());
+
         Brand brand = Brand.builder()
-                .name(form.getName().trim())
+                .brandCode(form.getBrandCode().trim().toUpperCase())
+                .brandName(form.getBrandName().trim())
+
                 .parentCompany(form.getParentCompany())
                 .category(form.getCategory())
+                .subCategory(form.getSubCategory())
                 .exciseCode(form.getExciseCode())
+                .exciseCessPercent(form.getExciseCessPercent())
+                .tcsPercent(form.getTcsPercent())
+                .gstPercent(form.getGstPercent())
                 .active(form.isActive())
                 .build();
+
         addSizeRows(brand, form);
         return mapToDTO(brandRepository.save(brand));
     }
 
-    // ── UPDATE WITH SIZES (edit mode — same form, brand + sizes) ──────
+    // ── UPDATE WITH SIZES (form) ──────────────────────────────────────
     @Override
     @Transactional
     public BrandDTO updateBrandWithSizes(Long id, BrandFormDTO form) {
         Brand brand = brandRepository.findByIdWithSizes(id)
                 .orElseThrow(() -> new RuntimeException("Brand not found: " + id));
 
-        brand.setName(form.getName().trim());
+        // Check code uniqueness (exclude self)
+        brandRepository.findByBrandCodeIgnoreCase(form.getBrandCode())
+                .filter(b -> !b.getId().equals(id))
+                .ifPresent(b -> { throw new RuntimeException("Brand code in use: " + form.getBrandCode()); });
+
+        brand.setBrandCode(form.getBrandCode().trim().toUpperCase());
+        brand.setBrandName(form.getBrandName().trim());
         brand.setParentCompany(form.getParentCompany());
         brand.setCategory(form.getCategory());
+        brand.setSubCategory(form.getSubCategory());
         brand.setExciseCode(form.getExciseCode());
+        brand.setExciseCessPercent(form.getExciseCessPercent());
+        brand.setTcsPercent(form.getTcsPercent());
+        brand.setGstPercent(form.getGstPercent());
         brand.setActive(form.isActive());
 
-        // Replace sizes: clearSizes() + orphanRemoval deletes old rows from DB
-        brand.clearSizes();
+        brand.clearSizes();          // orphanRemoval deletes old rows
         addSizeRows(brand, form);
 
         return mapToDTO(brandRepository.save(brand));
     }
 
-    // ── UPDATE (brand fields only) ────────────────────────────────────
+    // ── UPDATE BRAND FIELDS ONLY ──────────────────────────────────────
     @Override
     @Transactional
     public BrandDTO updateBrand(Long id, BrandDTO dto) {
         Brand brand = brandRepository.findByIdWithSizes(id)
                 .orElseThrow(() -> new RuntimeException("Brand not found: " + id));
-        brand.setName(dto.getName());
+        brand.setBrandCode(dto.getBrandCode());
+        brand.setBrandName(dto.getBrandName());
         brand.setParentCompany(dto.getParentCompany());
         brand.setCategory(dto.getCategory());
+        brand.setSubCategory(dto.getSubCategory());
         brand.setExciseCode(dto.getExciseCode());
+        brand.setExciseCessPercent(dto.getExciseCessPercent());
+        brand.setTcsPercent(dto.getTcsPercent());
+        brand.setGstPercent(dto.getGstPercent());
         return mapToDTO(brandRepository.save(brand));
     }
 
-    // ── DEACTIVATE BRAND ──────────────────────────────────────────────
+    // ── DEACTIVATE ────────────────────────────────────────────────────
     @Override
     @Transactional
     public void deactivateBrand(Long id) {
@@ -110,11 +161,21 @@ public class BrandServiceImpl implements BrandService {
                 .orElseThrow(() -> new RuntimeException("Brand not found: " + brandId));
         if (brandSizeRepository.existsByBrandIdAndSizeLabelIgnoreCase(brandId, dto.getSizeLabel()))
             throw new RuntimeException("Size '" + dto.getSizeLabel() + "' already exists");
+
         BrandSize size = BrandSize.builder()
                 .sizeLabel(dto.getSizeLabel())
-                .price(dto.getPrice())
-                .packaging(dto.getPackaging())
+                .volumeMl(dto.getVolumeMl())
+                .packaging(dto.getPackaging() != null ? dto.getPackaging() : BrandSize.Packaging.GLASS_BOTTLE)
+                .purchasePrice(dto.getPurchasePrice())
+                .sellingPrice(dto.getSellingPrice())
+                .mrp(dto.getMrp())
+                .mrpRounding(dto.getMrpRounding())
+                .exciseCessPercent(dto.getExciseCessPercent())
+                .tcsPercent(dto.getTcsPercent())
+                .gstPercent(dto.getGstPercent())
                 .abvPercent(dto.getAbvPercent())
+                .barcode(dto.getBarcode())
+                .hsnCode(dto.getHsnCode())
                 .displayOrder(dto.getDisplayOrder())
                 .active(true)
                 .build();
@@ -132,61 +193,67 @@ public class BrandServiceImpl implements BrandService {
         brandSizeRepository.save(size);
     }
 
-    // ── READ ──────────────────────────────────────────────────────────
-    @Override
-    @Transactional(readOnly = true)
-    public BrandDTO getBrandById(Long id) {
-        return brandRepository.findByIdWithSizes(id)
-                .map(this::mapToDTO)
-                .orElseThrow(() -> new RuntimeException("Brand not found: " + id));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<BrandDTO> getAllActiveBrands() {
-        return brandRepository.findAllActiveWithSizes()
-                .stream()
-                .map(this::mapToDTO)
-                .toList();
-    }
-
-    // ── HELPERS ───────────────────────────────────────────────────────
+    // ── PRIVATE: build BrandSize from SizeRow ─────────────────────────
     private void addSizeRows(Brand brand, BrandFormDTO form) {
         if (form.getSizes() == null) return;
         for (BrandFormDTO.SizeRow row : form.getSizes()) {
+            // Only skip rows where even the label is blank (user added an empty row by mistake)
             if (row.getSizeLabel() == null || row.getSizeLabel().isBlank()) continue;
-            if (row.getPrice() == null) continue;
+
             BrandSize size = BrandSize.builder()
                     .sizeLabel(row.getSizeLabel().trim())
-                    .price(row.getPrice())
+                    .volumeMl(row.getVolumeMl())
                     .packaging(row.getPackaging() != null
-                            ? row.getPackaging()
-                            : BrandSize.Packaging.GLASS_BOTTLE)
+                            ? row.getPackaging() : BrandSize.Packaging.GLASS_BOTTLE)
+                    .purchasePrice(row.getPurchasePrice())
+                    .sellingPrice(row.getSellingPrice())
+                    .mrp(row.getMrp())
+                    .mrpRounding(row.getMrpRounding() != null
+                            ? row.getMrpRounding() : BrandSize.MrpRounding.NONE)
+                    .exciseCessPercent(row.getExciseCessPercent())
+                    .tcsPercent(row.getTcsPercent())
+                    .gstPercent(row.getGstPercent())
                     .abvPercent(row.getAbvPercent())
+                    .barcode(row.getBarcode())
+                    .hsnCode(row.getHsnCode())
                     .displayOrder(row.getDisplayOrder())
-                    .active(true)
+                    .active(row.isActive())
                     .build();
             brand.addSize(size);
         }
     }
 
-    // ── MAPPER ────────────────────────────────────────────────────────
+    // ── MAPPER: Entity → DTO ──────────────────────────────────────────
     private BrandDTO mapToDTO(Brand brand) {
         return BrandDTO.builder()
                 .id(brand.getId())
-                .name(brand.getName())
+                .brandCode(brand.getBrandCode())
+                .brandName(brand.getBrandName())
                 .parentCompany(brand.getParentCompany())
                 .category(brand.getCategory())
+                .subCategory(brand.getSubCategory())
                 .exciseCode(brand.getExciseCode())
+                .exciseCessPercent(brand.getExciseCessPercent())
+                .tcsPercent(brand.getTcsPercent())
+                .gstPercent(brand.getGstPercent())
                 .active(brand.isActive())
                 .sizes(brand.getSizes().stream()
                         .filter(BrandSize::isActive)
                         .map(s -> BrandSizeDTO.builder()
                                 .id(s.getId())
                                 .sizeLabel(s.getSizeLabel())
-                                .price(s.getPrice())
+                                .volumeMl(s.getVolumeMl())
                                 .packaging(s.getPackaging())
+                                .purchasePrice(s.getPurchasePrice())
+                                .sellingPrice(s.getSellingPrice())
+                                .mrp(s.getMrp())
+                                .mrpRounding(s.getMrpRounding())
+                                .exciseCessPercent(s.getExciseCessPercent())
+                                .tcsPercent(s.getTcsPercent())
+                                .gstPercent(s.getGstPercent())
                                 .abvPercent(s.getAbvPercent())
+                                .barcode(s.getBarcode())
+                                .hsnCode(s.getHsnCode())
                                 .displayOrder(s.getDisplayOrder())
                                 .active(s.isActive())
                                 .build())

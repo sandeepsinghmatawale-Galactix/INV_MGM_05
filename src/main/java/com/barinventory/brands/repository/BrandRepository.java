@@ -11,10 +11,18 @@ import com.barinventory.brands.entity.Brand;
 
 public interface BrandRepository extends JpaRepository<Brand, Long> {
 
-    boolean existsByNameIgnoreCase(String name);
+    // ── Existence checks ──────────────────────────────────────────────
+    boolean existsByBrandNameIgnoreCase(String brandName);
+    boolean existsByBrandCodeIgnoreCase(String brandCode);
 
+    // ── Find by code (for uniqueness validation on update) ────────────
+    Optional<Brand> findByBrandCodeIgnoreCase(String brandCode);
+
+    // ── Active brands ─────────────────────────────────────────────────
     List<Brand> findByActiveTrue();
+    List<Brand> findByCategoryAndActiveTrue(Brand.Category category);
 
+    // ── Single brand with sizes (avoids N+1) ──────────────────────────
     @Query("""
            SELECT DISTINCT b FROM Brand b
            LEFT JOIN FETCH b.sizes s
@@ -22,13 +30,12 @@ public interface BrandRepository extends JpaRepository<Brand, Long> {
            """)
     Optional<Brand> findByIdWithSizes(@Param("id") Long id);
 
+    // ── All active brands with active sizes ───────────────────────────
     @Query("""
            SELECT DISTINCT b FROM Brand b
            LEFT JOIN FETCH b.sizes s
-           WHERE b.active = true AND (s.active = true OR s IS NULL)
-           ORDER BY b.name
+           WHERE b.active = true AND (s IS NULL OR s.active = true)
+           ORDER BY b.brandName
            """)
     List<Brand> findAllActiveWithSizes();
-    
-    List<Brand> findByCategoryAndActiveTrue(Brand.Category category);
 }

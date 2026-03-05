@@ -50,7 +50,7 @@ public class BillingServiceImpl implements BillingService {
     @Override
     public BrandDTO createBrand(BrandDTO dto) {
         Brand brand = Brand.builder()
-                .name(dto.getName())
+                .brandName(dto.getName())
                 .parentCompany(dto.getParentCompany())
                 .category(dto.getCategory())
                 .exciseCode(dto.getExciseCode())
@@ -72,7 +72,7 @@ public class BillingServiceImpl implements BillingService {
     public BrandDTO updateBrand(Long id, BrandDTO dto) {
         Brand brand = brandRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Brand not found: " + id));
-        brand.setName(dto.getName());
+        brand.setBrandName(dto.getName());
         brand.setParentCompany(dto.getParentCompany());
         brand.setCategory(dto.getCategory());
         brand.setExciseCode(dto.getExciseCode());
@@ -102,13 +102,13 @@ public class BillingServiceImpl implements BillingService {
         return brands.stream()
                 .map(brand -> new BrandBillingDTO(
                         brand.getId(),
-                        brand.getName(),
+                        brand.getBrandName(),
                         brand.getSizes().stream()
                                 .filter(BrandSize::isActive) // only active sizes
                                 .map(size -> new BrandBillingDTO.BrandSizeDTO(
                                         size.getId(),
                                         size.getSizeLabel(),
-                                        size.getPrice(),
+                                        size.getMrp(),
                                         size.isActive()
                                 ))
                                 .toList()
@@ -151,14 +151,14 @@ public class BillingServiceImpl implements BillingService {
                 throw new RuntimeException("Brand/Size is inactive: " + itemReq.getBrandSizeId());
             }
 
-            BigDecimal lineTotal = size.getPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity()));
+            BigDecimal lineTotal = size.getMrp().multiply(BigDecimal.valueOf(itemReq.getQuantity()));
 
             BillItem item = BillItem.builder()
                     .bill(bill)
                     .brandId(size.getBrand().getId())
-                    .brandName(size.getBrand().getName())   // SNAPSHOT
+                    .brandName(size.getBrand().getBrandName())   // SNAPSHOT
                     .sizeLabel(size.getSizeLabel())          // SNAPSHOT
-                    .unitPrice(size.getPrice())              // SNAPSHOT
+                    .unitPrice(size.getMrp())              // SNAPSHOT
                     .quantity(itemReq.getQuantity())
                     .lineTotal(lineTotal)
                     .build();
@@ -211,7 +211,7 @@ public class BillingServiceImpl implements BillingService {
         BrandSize size = BrandSize.builder()
                 .brand(brand)  // VERY IMPORTANT (FK mapping)
                 .sizeLabel(dto.getSizeLabel())
-                .price(dto.getPrice())
+                .mrp(dto.getPrice())
                 .packaging(dto.getPackaging())
                 .abvPercent(dto.getAbvPercent())
                 .displayOrder(dto.getDisplayOrder())
@@ -240,7 +240,7 @@ public class BillingServiceImpl implements BillingService {
     private BrandDTO mapToBrandDTO(Brand brand) {
         return BrandDTO.builder()
                 .id(brand.getId())
-                .name(brand.getName())
+                .name(brand.getBrandName())
                 .parentCompany(brand.getParentCompany())
                 .category(brand.getCategory())
                 .exciseCode(brand.getExciseCode())
@@ -254,7 +254,7 @@ public class BillingServiceImpl implements BillingService {
         return BrandSizeDTO.builder()
                 .id(size.getId())
                 .sizeLabel(size.getSizeLabel())
-                .price(size.getPrice())
+                .price(size.getMrp())
                 .packaging(size.getPackaging())
                 .abvPercent(size.getAbvPercent())
                 .displayOrder(size.getDisplayOrder())
@@ -266,7 +266,7 @@ public class BillingServiceImpl implements BillingService {
         return BrandSize.builder()
                 .brand(brand)
                 .sizeLabel(dto.getSizeLabel())
-                .price(dto.getPrice())
+                .mrp(dto.getPrice())
                 .packaging(dto.getPackaging())
                 .abvPercent(dto.getAbvPercent())
                 .displayOrder(dto.getDisplayOrder())

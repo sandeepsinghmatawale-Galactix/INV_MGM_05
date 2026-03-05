@@ -7,46 +7,63 @@ import java.util.List;
 import com.barinventory.brands.entity.Brand;
 import com.barinventory.brands.entity.BrandSize;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.*;
 
-/**
- * Single-page brand creation DTO. Carries brand fields + an inline list of
- * sizes. Used by the brand-create.html form.
- */
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class BrandFormDTO {
 
-	// ── Brand fields ──────────────────────────────────────────
-	private Long id; // null on create, populated on edit
-	private String name;
-	private String parentCompany;
-	private Brand.Category category;
-	private String exciseCode;
+    private Long id;
 
-	@Builder.Default
-	private boolean active = true;
+    // ── REQUIRED — only these two must be present ─────────────
+    @NotBlank(message = "Brand code is required")
+    @Size(max = 20, message = "Brand code max 20 characters")
+    private String brandCode;
 
-	// ── Inline sizes ──────────────────────────────────────────
-	@Builder.Default
-	private List<SizeRow> sizes = new ArrayList<>();
+    @NotBlank(message = "Brand name is required")
+    private String brandName;
 
-	// ── Nested DTO for each size row ──────────────────────────
-	@Data
-	@NoArgsConstructor
-	@AllArgsConstructor
-	@Builder
-	public static class SizeRow {
-		private String sizeLabel; // "180ml", "750ml", etc.
-		
-		private BrandSize.Packaging packaging;
-		private BigDecimal price;
-		private Double abvPercent;
-		private Integer displayOrder;
-	}
+    // ── OPTIONAL — everything else ────────────────────────────
+    private String parentCompany;
+    private Brand.Category category;
+    private Brand.SubCategory subCategory;
+    private String exciseCode;
+    private BigDecimal exciseCessPercent;
+    private BigDecimal tcsPercent;
+    private BigDecimal gstPercent;
+
+    @Builder.Default
+    private boolean active = true;
+
+    @Valid
+    @Builder.Default
+    private List<SizeRow> sizes = new ArrayList<>();
+
+    // ── Nested size row ───────────────────────────────────────
+    @Data @NoArgsConstructor @AllArgsConstructor @Builder
+    public static class SizeRow {
+
+        // Only sizeLabel is required on a size row
+        private String sizeLabel;
+
+        // Everything else is optional
+        private Integer volumeMl;
+        private BrandSize.Packaging packaging;
+        private BigDecimal purchasePrice;
+        private BigDecimal sellingPrice;
+        private BigDecimal mrp;
+        private BrandSize.MrpRounding mrpRounding;
+        private BigDecimal exciseCessPercent;
+        private BigDecimal tcsPercent;
+        private BigDecimal gstPercent;
+        private Double abvPercent;
+        private String barcode;
+        private String hsnCode;
+        private Integer displayOrder;
+
+        @Builder.Default
+        private boolean active = true;
+    }
 }

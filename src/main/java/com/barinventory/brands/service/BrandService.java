@@ -9,24 +9,16 @@ import com.barinventory.brands.entity.Brand;
 
 public interface BrandService {
 
-	BrandDTO createBrand(BrandDTO dto);
+	 List<Brand>    getAllBrands();
+	    List<BrandDTO> getAllActiveBrands();
+	    BrandDTO       getBrandById(Long id);
+	    BrandDTO       createBrand(BrandDTO dto);
+	    BrandDTO       createBrandWithSizes(BrandFormDTO form);
+	    BrandDTO       updateBrand(Long id, BrandDTO dto);
+	    BrandDTO       updateBrandWithSizes(Long id, BrandFormDTO form);
+	    void           deactivateBrand(Long id);
 
-	BrandDTO createBrandWithSizes(BrandFormDTO formDTO);
-
-	BrandDTO updateBrand(Long id, BrandDTO dto);
-
-	void deactivateBrand(Long id);
-
-	void addSizeToBrand(Long brandId, BrandSizeDTO dto);
-
-	void deactivateSize(Long sizeId);
-
-	BrandDTO getBrandById(Long id);
-
-	List<BrandDTO> getAllActiveBrands();
-
-	/** Edit mode: replaces all sizes with the new set from the form */
-	BrandDTO updateBrandWithSizes(Long id, BrandFormDTO form);
-
-	List<Brand> getAllBrands();
+	    // Size operations
+	    void addSizeToBrand(Long brandId, BrandSizeDTO dto);
+	    void deactivateSize(Long sizeId);
 }

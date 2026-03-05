@@ -13,30 +13,108 @@ public class BrandSize {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // ── Parent ────────────────────────────────────────────────
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "brand_id", nullable = false)
     private Brand brand;
 
-    @Column(name = "size_label", nullable = false)
-    private String sizeLabel; // "180ml", "375ml", "750ml", "1L"
+    // ── REQUIRED ──────────────────────────────────────────────
+    @Column(name = "size_label", nullable = false, length = 20)
+    private String sizeLabel;           // e.g. "750ml"
 
-    @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal price; // retail selling price (MRP)
+    // ── OPTIONAL — all nullable so partial saves work ─────────
+    @Column(name = "volume_ml")
+    private Integer volumeMl;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "packaging")
     private Packaging packaging;
 
+    @Column(name = "purchase_price", precision = 10, scale = 2)
+    private BigDecimal purchasePrice;
+
+    @Column(name = "selling_price", precision = 10, scale = 2)
+    private BigDecimal sellingPrice;
+
+    @Column(name = "mrp", precision = 10, scale = 2)
+    private BigDecimal mrp;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "mrp_rounding")
+    private MrpRounding mrpRounding;
+
+    @Column(name = "excise_cess_percent", precision = 5, scale = 2)
+    private BigDecimal exciseCessPercent;
+
+    @Column(name = "tcs_percent", precision = 5, scale = 2)
+    private BigDecimal tcsPercent;
+
+    @Column(name = "gst_percent", precision = 5, scale = 2)
+    private BigDecimal gstPercent;
+
+    // ✅ Double → SQL DOUBLE (floating point) — NO precision/scale allowed
     @Column(name = "abv_percent")
     private Double abvPercent;
+
+    @Column(name = "barcode", length = 50)
+    private String barcode;
+
+    @Column(name = "hsn_code", length = 20)
+    private String hsnCode;
 
     @Column(name = "display_order")
     private Integer displayOrder;
 
     @Column(nullable = false)
+    @Builder.Default
     private boolean active = true;
 
+    // ── Transient helpers ─────────────────────────────────────
+    @Transient
+    public BigDecimal getEffectiveMrp() {
+        if (mrp == null) return null;
+        if (mrpRounding == null || mrpRounding == MrpRounding.NONE) return mrp;
+        return mrpRounding.apply(mrp);
+    }
+
+    @Transient
+    public BigDecimal getGrossMargin() {
+        if (sellingPrice == null || purchasePrice == null) return null;
+        return sellingPrice.subtract(purchasePrice);
+    }
+
+    // ── Enums ─────────────────────────────────────────────────
     public enum Packaging {
-        GLASS_BOTTLE, PET, CAN
+        GLASS_BOTTLE, PET, CAN, TETRA, KEG
+    }
+
+    public enum MrpRounding {
+        NONE {
+            @Override public BigDecimal apply(BigDecimal v) { return v; }
+        },
+        ROUND_UP {
+            @Override public BigDecimal apply(BigDecimal v) {
+                return v.setScale(0, java.math.RoundingMode.CEILING);
+            }
+        },
+        ROUND_DOWN {
+            @Override public BigDecimal apply(BigDecimal v) {
+                return v.setScale(0, java.math.RoundingMode.FLOOR);
+            }
+        },
+        NEAREST_5 {
+            @Override public BigDecimal apply(BigDecimal v) {
+                return v.divide(BigDecimal.valueOf(5), 0, java.math.RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(5));
+            }
+        },
+        NEAREST_10 {
+            @Override public BigDecimal apply(BigDecimal v) {
+                return v.divide(BigDecimal.TEN, 0, java.math.RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.TEN);
+            }
+        };
+
+        public abstract BigDecimal apply(BigDecimal value);
     }
 }

@@ -10,6 +10,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.barinventory.brands.dtos.BrandDTO;
 import com.barinventory.brands.dtos.BrandFormDTO;
+import com.barinventory.brands.dtos.BrandSizeDTO;
 import com.barinventory.brands.entity.Brand;
 import com.barinventory.brands.entity.BrandSize;
 import com.barinventory.brands.service.BrandService;
@@ -25,44 +26,45 @@ public class BrandAdminController {
     private final BrandService brandService;
 
     // ── LIST ──────────────────────────────────────────────────────────
- /*   @GetMapping
-    public String list(Model model) {
-        model.addAttribute("brands", brandService.getAllActiveBrands());
-        return "admin/brands/brand-list";
-    }*/
-    
-    @GetMapping("/admin/brands")
+    @GetMapping
     public String listBrands(Model model) {
-
         List<Brand> brands = brandService.getAllBrands();
 
-        long activeCount = brands.stream()
-                                 .filter(Brand::isActive)
-                                 .count();
+        long activeCount   = brands.stream().filter(Brand::isActive).count();
+        long totalSizes    = brands.stream().mapToLong(b -> b.getSizes().size()).sum();
+        long categoryCount = brands.stream().map(Brand::getCategory).distinct().count();
 
-        model.addAttribute("brands", brands);
-        model.addAttribute("activeCount", activeCount);
+        model.addAttribute("brands",        brands);
+        model.addAttribute("activeCount",   activeCount);
+        model.addAttribute("totalSizes",    totalSizes);
+        model.addAttribute("categoryCount", categoryCount);
 
         return "admin/brands/brand-list";
     }
 
-    // ── CREATE: show single-page form ─────────────────────────────────
+    // ── CREATE: show form ─────────────────────────────────────────────
     @GetMapping("/create")
     public String createForm(Model model) {
-        model.addAttribute("brandFormDTO",   new BrandFormDTO());
-        model.addAttribute("categories",     Brand.Category.values());
+        BrandFormDTO form = new BrandFormDTO();
+        form.getSizes().add(new BrandFormDTO.SizeRow()); // one empty row by default
+
+        model.addAttribute("brandFormDTO",    form);
+        model.addAttribute("categories",      Brand.Category.values());
+        model.addAttribute("subCategories",   Brand.SubCategory.values());
         model.addAttribute("packagingOptions", BrandSize.Packaging.values());
-        return "admin/brands/brand-create";
+        model.addAttribute("roundingOptions",  BrandSize.MrpRounding.values());
+        model.addAttribute("isEdit",           false);
+        return "admin/brands/brand-form";
     }
 
-    // ── CREATE: save brand + all sizes in one POST ────────────────────
+    // ── CREATE: save ──────────────────────────────────────────────────
     @PostMapping("/new-with-sizes")
     public String saveWithSizes(@ModelAttribute BrandFormDTO brandFormDTO,
                                 RedirectAttributes ra) {
         try {
             brandService.createBrandWithSizes(brandFormDTO);
             ra.addFlashAttribute("successMsg",
-                    "Brand '" + brandFormDTO.getName() + "' created successfully!");
+                    "Brand '" + brandFormDTO.getBrandName() + "' created successfully!");
             return "redirect:/admin/brands";
         } catch (RuntimeException e) {
             ra.addFlashAttribute("errorMsg", e.getMessage());
@@ -70,39 +72,56 @@ public class BrandAdminController {
         }
     }
 
-    // ── EDIT: show single-page form pre-populated ─────────────────────
+    // ── EDIT: show pre-populated form ─────────────────────────────────
     @GetMapping("/{id}/edit")
     public String editForm(@PathVariable Long id, Model model) {
         BrandDTO dto = brandService.getBrandById(id);
 
-        // Map BrandDTO → BrandFormDTO so the same form handles both create & edit
         BrandFormDTO form = new BrandFormDTO();
         form.setId(dto.getId());
-        form.setName(dto.getName());
+        form.setBrandCode(dto.getBrandCode());
+        form.setBrandName(dto.getBrandName());
         form.setParentCompany(dto.getParentCompany());
         form.setCategory(dto.getCategory());
+        form.setSubCategory(dto.getSubCategory());
         form.setExciseCode(dto.getExciseCode());
+        form.setExciseCessPercent(dto.getExciseCessPercent());
+        form.setTcsPercent(dto.getTcsPercent());
+        form.setGstPercent(dto.getGstPercent());
         form.setActive(dto.isActive());
 
         if (dto.getSizes() != null) {
             dto.getSizes().forEach(s -> {
                 BrandFormDTO.SizeRow row = new BrandFormDTO.SizeRow();
                 row.setSizeLabel(s.getSizeLabel());
+                row.setVolumeMl(s.getVolumeMl());
                 row.setPackaging(s.getPackaging());
-                row.setPrice(s.getPrice());
+                row.setPurchasePrice(s.getPurchasePrice());
+                row.setSellingPrice(s.getSellingPrice());
+                row.setMrp(s.getMrp());
+                row.setMrpRounding(s.getMrpRounding());
+                row.setExciseCessPercent(s.getExciseCessPercent());
+                row.setTcsPercent(s.getTcsPercent());
+                row.setGstPercent(s.getGstPercent());
                 row.setAbvPercent(s.getAbvPercent());
+                row.setBarcode(s.getBarcode());
+                row.setHsnCode(s.getHsnCode());
                 row.setDisplayOrder(s.getDisplayOrder());
+                row.setActive(s.isActive());
                 form.getSizes().add(row);
             });
         }
 
-        model.addAttribute("brandFormDTO",   form);
-        model.addAttribute("categories",     Brand.Category.values());
+        model.addAttribute("brandFormDTO",    form);
+        model.addAttribute("categories",      Brand.Category.values());
+        model.addAttribute("subCategories",   Brand.SubCategory.values());
         model.addAttribute("packagingOptions", BrandSize.Packaging.values());
-        return "admin/brands/brand-create";    // reuse the same template
+        model.addAttribute("roundingOptions",  BrandSize.MrpRounding.values());
+        model.addAttribute("isEdit",           true);
+        return "admin/brands/brand-form";
     }
 
-    // ── EDIT: save updated brand + sizes ──────────────────────────────
+    // ── EDIT: save ────────────────────────────────────────────────────
     @PostMapping("/{id}/edit")
     public String update(@PathVariable Long id,
                          @ModelAttribute BrandFormDTO brandFormDTO,
@@ -110,16 +129,16 @@ public class BrandAdminController {
         try {
             brandService.updateBrandWithSizes(id, brandFormDTO);
             ra.addFlashAttribute("successMsg",
-                    "Brand '" + brandFormDTO.getName() + "' updated successfully!");
+                    "Brand '" + brandFormDTO.getBrandName() + "' updated successfully!");
         } catch (RuntimeException e) {
             ra.addFlashAttribute("errorMsg", e.getMessage());
         }
         return "redirect:/admin/brands";
     }
 
-    // ── DEACTIVATE (soft delete) ──────────────────────────────────────
+    // ── DEACTIVATE ────────────────────────────────────────────────────
     @PostMapping("/{id}/delete")
-    public String delete(@PathVariable Long id, RedirectAttributes ra) {
+    public String deactivate(@PathVariable Long id, RedirectAttributes ra) {
         try {
             brandService.deactivateBrand(id);
             ra.addFlashAttribute("successMsg", "Brand deactivated.");
@@ -129,7 +148,7 @@ public class BrandAdminController {
         return "redirect:/admin/brands";
     }
 
-    // ── OLD /new redirect (backward compat) ──────────────────────────
+    // ── Legacy redirect ───────────────────────────────────────────────
     @GetMapping("/new")
     public String legacyNew() {
         return "redirect:/admin/brands/create";

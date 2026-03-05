@@ -1,24 +1,25 @@
 package com.barinventory.brands.dtos;
 
 import java.math.BigDecimal;
-
 import com.barinventory.brands.entity.BrandSize;
+import lombok.*;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class BrandSizeDTO {
-	private Long id;
-	private String sizeLabel;
-	private BigDecimal price;
-	private BrandSize.Packaging packaging;
-	private Double abvPercent;
-	private Integer displayOrder;
-	private boolean active;
+    private Long id;
+    private String sizeLabel;
+    private Integer volumeMl;
+    private BrandSize.Packaging packaging;
+    private BigDecimal purchasePrice;
+    private BigDecimal sellingPrice;
+    private BigDecimal mrp;
+    private BrandSize.MrpRounding mrpRounding;
+    private BigDecimal exciseCessPercent;
+    private BigDecimal tcsPercent;
+    private BigDecimal gstPercent;
+    private Double abvPercent;
+    private String barcode;
+    private String hsnCode;
+    private Integer displayOrder;
+    private boolean active;
 }

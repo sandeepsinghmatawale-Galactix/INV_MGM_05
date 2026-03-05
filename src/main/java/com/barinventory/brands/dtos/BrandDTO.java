@@ -1,24 +1,23 @@
 package com.barinventory.brands.dtos;
 
+import java.math.BigDecimal;
 import java.util.List;
-
 import com.barinventory.brands.entity.Brand;
+import lombok.*;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+// ── BrandDTO ──────────────────────────────────────────────────────────────────
+@Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class BrandDTO {
-	private Long id;
-	private String name;
-	private String parentCompany;
-	private Brand.Category category;
-	private String exciseCode;
-	private boolean active;
-	private List<BrandSizeDTO> sizes;
+    private Long id;
+    private String brandCode;
+    private String brandName;
+    private String parentCompany;
+    private Brand.Category category;
+    private Brand.SubCategory subCategory;
+    private String exciseCode;
+    private BigDecimal exciseCessPercent;
+    private BigDecimal tcsPercent;
+    private BigDecimal gstPercent;
+    private boolean active;
+    private List<BrandSizeDTO> sizes;
 }
